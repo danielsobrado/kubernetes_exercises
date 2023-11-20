@@ -3,6 +3,7 @@ import sys
 import logging
 import requests
 import re
+import yaml
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -28,6 +29,26 @@ def validate_resource(resource_type, resource_name):
     logging.info(f"Validating {resource_type} {resource_name}...")
     run_command(f"kubectl get {resource_type} {resource_name}")
 
+def check_pod_state(pod_name, expected_state, namespace="default"):
+    """Check if a Kubernetes pod is in a particular state."""
+    logging.info(f"Checking if pod '{pod_name}' in namespace '{namespace}' is in '{expected_state}' state...")
+
+    command = f"kubectl get pod {pod_name} -n {namespace} -o custom-columns=:status.phase --no-headers"
+    try:
+        # Run the kubectl command
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, universal_newlines=True)
+        pod_state = result.stdout.strip()
+
+        if pod_state == expected_state:
+            logging.info(f"Pod '{pod_name}' is in the expected '{expected_state}' state.")
+            return True
+        else:
+            logging.error(f"Pod '{pod_name}' is in '{pod_state}' state, expected '{expected_state}'.")
+            return False
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to get the state of the pod: {e}")
+        return False
+    
 def validate_pod_connectivity(pod_name, target_pod_name, target_port):
     """Validate if one pod can connect to another on a specific port."""
     logging.info(f"Checking connectivity from {pod_name} to {target_pod_name} on port {target_port}...")
@@ -133,10 +154,6 @@ def check_api_version_available(api_version):
     except subprocess.CalledProcessError as e:
         logging.error(f"Failed to check API version availability: {e}")
         sys.exit(1)
-
-import subprocess
-import yaml
-import logging
 
 def get_and_verify_pod_attributes(pod_name, namespace="default", attributes_to_verify=None):
     """Get a pod's YAML definition and verify specified attributes."""
