@@ -134,30 +134,45 @@ def check_api_version_available(api_version):
         logging.error(f"Failed to check API version availability: {e}")
         sys.exit(1)
 
-def validate_pod_details_from_file(file_path):
-    """Validate pod details from a text file."""
-    logging.info(f"Validating pod details from {file_path}...")
+import subprocess
+import yaml
+import logging
 
+def get_and_verify_pod_attributes(pod_name, namespace="default", attributes_to_verify=None):
+    """Get a pod's YAML definition and verify specified attributes."""
+    logging.info(f"Retrieving YAML for pod {pod_name} in namespace {namespace}...")
+
+    command = f"kubectl get po {pod_name} -n {namespace} -o yaml"
     try:
-        with open(file_path, 'r') as file:
-            for line_number, line in enumerate(file, start=1):
-                line = line.strip()
+        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, universal_newlines=True)
+        pod_yaml = result.stdout
 
-                if not line:
-                    continue
+        pod_data = yaml.safe_load(pod_yaml)
 
-                if re.match(r'^([^/]+/)+[^/]+$', line):
-                    logging.info(f"Line {line_number} is valid: {line}")
-                else:
-                    logging.error(f"Line {line_number} is invalid: {line}")
+        if attributes_to_verify:
+            for attribute, expected_value in attributes_to_verify.items():
+                actual_value = get_nested_attribute(pod_data, attribute.split('.'))
+                if actual_value != expected_value:
+                    logging.error(f"Attribute '{attribute}' has value '{actual_value}', expected '{expected_value}'")
                     return False
+                else:
+                    logging.info(f"Attribute '{attribute}' correctly has value '{expected_value}'")
         return True
-    except FileNotFoundError:
-        logging.error(f"File not found: {file_path}")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to retrieve YAML: {e}")
         return False
-    except IOError as e:
-        logging.error(f"Error reading file {file_path}: {e}")
+    except Exception as e:
+        logging.error(f"Error processing YAML: {e}")
         return False
+
+def get_nested_attribute(data, attribute_path):
+    """Recursively fetch a nested attribute."""
+    for key in attribute_path:
+        if isinstance(data, dict) and key in data:
+            data = data[key]
+        else:
+            return None
+    return data
 
 def execute_validation(exercise_number):
     """Execute validation based on exercise number using a dynamic approach."""

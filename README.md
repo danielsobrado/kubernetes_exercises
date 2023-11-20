@@ -24,6 +24,7 @@ This tool provides a set of functions to validate various aspects of a Kubernete
    
    ```bash
    pip install requests
+   pip install PyYAML
    ```
 
 3. Clone the repository or download the script files to your local machine.
