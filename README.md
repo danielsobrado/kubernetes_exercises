@@ -1,4 +1,4 @@
-# Kubernetes Validation Tool
+# Kubernetes CKAD Exercise Validation Tool
 
 This tool provides a set of functions to validate various aspects of a Kubernetes cluster, including pod connectivity, URL accessibility from within and outside the cluster, and user permissions.
 
